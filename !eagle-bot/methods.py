@@ -3,9 +3,6 @@ import datetime
 import sqlite3
 import json
 
-db = sqlite3.connect("ideas.db")
-cursor = db.cursor()
-
 def startprint(name):
 	now = datetime.datetime.now().strftime("%H:%M:%S")
 	print (f"[{now}] {name} started.")
@@ -26,37 +23,41 @@ def error(text: str):
 	return embed1
 
 def set_rating(user_id: int, idea_id: int, rating: int):
-	row = cursor.execute(f"SELECT likes, dislikes, voted FROM ideas WHERE id = {idea_id}").fetchone()
-	if row is None:
-		return
+	with sqlite3.connect("ideas.db") as db:
+		cursor = db.cursor()
+		row = cursor.execute("SELECT likes, dislikes, voted FROM ideas WHERE id = ?", (idea_id,)).fetchone()
+		if not row:
+			return
 
-	likes, dislikes, voted_json = row
-	voted = json.loads(voted_json)
+		likes, dislikes, voted_json = row
+		voted = json.loads(voted_json)
 
-	prev_rating = voted.get(str(user_id), 0)
+		prev_rating = voted.get(str(user_id), 0)
 
-	if prev_rating == rating:
-		return
-	
-	if prev_rating == 1: 
-		likes -= 1
-	elif prev_rating == -1:
-		dislikes -= 1
+		if prev_rating == rating:
+			return
+		
+		if prev_rating == 1: 
+			likes -= 1
+		elif prev_rating == -1:
+			dislikes -= 1
 
-	if rating == 1:
-		likes += 1
-	elif rating == -1:
-		dislikes += 1
+		if rating == 1:
+			likes += 1
+		elif rating == -1:
+			dislikes += 1
 
-	voted[str(user_id)] = rating
+		voted[str(user_id)] = rating
 
-	cursor.execute("UPDATE ideas SET likes = ?, dislikes = ?, voted = ? WHERE id = ?",
-				(likes, dislikes, json.dumps(voted), idea_id))
-	db.commit()
+		cursor.execute("UPDATE ideas SET likes = ?, dislikes = ?, voted = ? WHERE id = ?",
+					(likes, dislikes, json.dumps(voted), idea_id))
+		db.commit()
 
 def get_rating(idea_id: int):
-    row = cursor.execute(f"SELECT likes, dislikes FROM ideas WHERE id = {idea_id}").fetchone()
-    return row if row else (0, 0)
+	with sqlite3.connect("ideas.db") as db:
+		cursor = db.cursor()
+		row = cursor.execute(f"SELECT likes, dislikes FROM ideas WHERE id = {idea_id}").fetchone()
+		return row if row else (0, 0)
 
 
 

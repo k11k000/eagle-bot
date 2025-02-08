@@ -5,8 +5,7 @@ import methods
 import sqlite3
 import json
 
-db = sqlite3.connect("ideas.db")
-cursor = db.cursor()
+IDEA_CHANNEL_ID = 1335383057703637164 # тут айди канала с идеями
 
 class IdeaModal(disnake.ui.Modal):
     def __init__(self):
@@ -33,7 +32,7 @@ class IdeaModal(disnake.ui.Modal):
         embed.add_field(name="Лайков:", value="```0```", inline=True)
         embed.add_field(name="Дизлайков:", value="```0```", inline=True)
 
-        channel = await inter.guild.fetch_channel(1335383057703637164)
+        channel = inter.guild.get_channel(IDEA_CHANNEL_ID)
         message = await channel.send(embed=embed)
 
         components=[
@@ -42,12 +41,17 @@ class IdeaModal(disnake.ui.Modal):
         ]
 
         await message.edit(components=components)
-
-        cursor.execute(
-            "INSERT INTO ideas VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (message.id, inter.author.id, inter.text_values['idea'], 0, 0, '{}', '')
+        await message.create_thread(
+            name=f"Обсуждение идеи {inter.author.name}",
+            auto_archive_duration=10080,
         )
-        db.commit()
+        with sqlite3.connect("ideas.db") as db:
+            cursor = db.cursor()
+            cursor.execute(
+                "INSERT INTO ideas VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (message.id, inter.author.id, inter.text_values['idea'], 0, 0, '{}', '')
+            )
+            db.commit()
 
 class Idea(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -59,11 +63,11 @@ class Idea(commands.Cog):
 
     @commands.Cog.listener("on_button_click")
     async def idea_listener(self, inter: disnake.MessageInteraction):
+        
+        if inter.component.custom_id not in ("like", "dislike"):
+                return
 
-        if not inter.component.custom_id.startswith(("like", "dislike")):
-            return
-
-        if inter.component.custom_id.startswith(("like")):
+        if inter.component.custom_id == "like":
 
             methods.set_rating(inter.author.id, inter.message.id, 1)
             likes, dislikes = methods.get_rating(inter.message.id)
@@ -76,7 +80,7 @@ class Idea(commands.Cog):
             await inter.message.edit(embed=embed)
             await inter.response.send_message("Ты проголосовал :thumbsup:", ephemeral=True)
 
-        elif inter.component.custom_id.startswith(("dislike")):
+        elif inter.component.custom_id == "dislike":
 
             methods.set_rating(inter.author.id, inter.message.id, -1)
             likes, dislikes = methods.get_rating(inter.message.id)

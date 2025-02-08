@@ -1,4 +1,5 @@
 import sqlite3
+import os
 from tabulate import tabulate
 
 def fetch_and_print_ideas(db_path):
@@ -16,4 +17,4 @@ def fetch_and_print_ideas(db_path):
     
     conn.close()
 
-fetch_and_print_ideas(r"C:\Users\user\Desktop\work\!eagle-bot\ideas.db") #тут путь ребят
+fetch_and_print_ideas(os.path.join("..", "your_file.txt"))
