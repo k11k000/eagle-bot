@@ -17,4 +17,4 @@ def fetch_and_print_ideas(db_path):
     
     conn.close()
 
-fetch_and_print_ideas(os.path.join("..", "your_file.txt"))
+fetch_and_print_ideas(os.path.join("..", "ideas.db"))

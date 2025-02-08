@@ -61,9 +61,47 @@ class Idea(commands.Cog):
     async def idea(self, inter: disnake.ApplicationCommandInteraction):
         await inter.response.send_modal(modal=IdeaModal())
 
+    @commands.slash_command(description="Ответить на идею.")
+    @commands.default_member_permissions(manage_threads=True, manage_messages=True)
+    async def answer(
+        self, 
+        inter: disnake.ApplicationCommandInteraction, 
+        idea_id: str = commands.Param(name='айди', description='Айди сообщения с идеей.'),
+        raw_answer: str = commands.Param(name='ответ', description='Ответ на идею.', choices=['Отклонено', 'Принято']),
+        reason: str = commands.Param(name='причина', description='Причина ответа. Например: Идея реализована на сервере или Нереализуемо.')
+    ):
+
+        try: 
+            channel = inter.guild.get_channel(int(IDEA_CHANNEL_ID))
+            message = await channel.fetch_message(idea_id)
+
+            if raw_answer == "Отклонено":
+                answer = ':x: Отклонено'
+            elif raw_answer == 'Принято':
+                answer = ':white_check_mark: Принято'
+
+            embed = message.embeds[0]
+            embed.remove_field(2)
+            embed.add_field(name=answer, value=reason, inline=False)
+            
+            await message.edit(embed=embed, components=[])
+
+            thread = message.thread
+            if thread:
+                await thread.edit(locked=True)
+
+            with sqlite3.connect("ideas.db") as db:
+                cursor = db.cursor()
+                cursor.execute("UPDATE ideas SET answer = ? WHERE id = ?", (raw_answer, idea_id))
+                db.commit()
+
+            await inter.send(f'Ты успешно ответил на идею {message.jump_url}', ephemeral=True)
+        except:
+            embed = methods.error("Указан неверный айди идеи")
+            await inter.send(embed=embed, ephemeral=True)
+
     @commands.Cog.listener("on_button_click")
     async def idea_listener(self, inter: disnake.MessageInteraction):
-        
         if inter.component.custom_id not in ("like", "dislike"):
                 return
 
