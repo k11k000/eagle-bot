@@ -8,9 +8,8 @@ import sqlite3
 from dotenv import load_dotenv
 
 activity = disnake.Activity(
-    name="/idea",
+    name="/info",
     type=disnake.ActivityType.watching,
-    state="жароу",
 )
 
 bot = commands.Bot(

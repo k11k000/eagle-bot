@@ -14,7 +14,7 @@ def embed(title: str, description: str, color = disnake.Colour.yellow(), timesta
 		color=color,
 	)
 
-	if timestamp == True:
+	if timestamp:
 		embed.timestamp = datetime.datetime.now()
 	return embed
 
@@ -56,7 +56,7 @@ def set_rating(user_id: int, idea_id: int, rating: int):
 def get_rating(idea_id: int):
 	with sqlite3.connect("ideas.db") as db:
 		cursor = db.cursor()
-		row = cursor.execute(f"SELECT likes, dislikes FROM ideas WHERE id = {idea_id}").fetchone()
+		row = cursor.execute("SELECT likes, dislikes FROM ideas WHERE id = ?", (idea_id,)).fetchone()
 		return row if row else (0, 0)
 
 

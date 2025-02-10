@@ -4,6 +4,7 @@ from disnake import TextInputStyle
 import methods
 import sqlite3
 import json
+import traceback
 
 IDEA_CHANNEL_ID = 1335383057703637164 # тут айди канала с идеями
 
@@ -25,12 +26,10 @@ class IdeaModal(disnake.ui.Modal):
         )
 
     async def callback(self, inter: disnake.ModalInteraction):
-        await inter.response.send_message("Идея отправлена!", ephemeral=True)
-
-        embed = methods.embed(f"Идея {inter.author.name}", inter.text_values['idea'])
+        embed = methods.embed(f"💡 Идея от {inter.author.name}", inter.text_values['idea'])
         embed.set_thumbnail(url=inter.author.avatar.url)
-        embed.add_field(name="Лайков:", value="```0```", inline=True)
-        embed.add_field(name="Дизлайков:", value="```0```", inline=True)
+        embed.add_field(name="👍 Лайки:", value="```0```", inline=True)
+        embed.add_field(name="👎 Дизлайки:", value="```0```", inline=True)
 
         channel = inter.guild.get_channel(IDEA_CHANNEL_ID)
         message = await channel.send(embed=embed)
@@ -52,6 +51,7 @@ class IdeaModal(disnake.ui.Modal):
                 (message.id, inter.author.id, inter.text_values['idea'], 0, 0, '{}', '')
             )
             db.commit()
+        await inter.response.send_message(f"Идея отправлена! \n{message.jump_url}", ephemeral=True)
 
 class Idea(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -72,13 +72,15 @@ class Idea(commands.Cog):
     ):
 
         try: 
+            await inter.response.defer(ephemeral=True)
+
             channel = inter.guild.get_channel(int(IDEA_CHANNEL_ID))
             message = await channel.fetch_message(idea_id)
 
             if raw_answer == "Отклонено":
-                answer = ':x: Отклонено'
+                answer = '❌ Отклонено'
             elif raw_answer == 'Принято':
-                answer = ':white_check_mark: Принято'
+                answer = '✅ Принято'
 
             embed = message.embeds[0]
             embed.remove_field(2)
@@ -94,42 +96,45 @@ class Idea(commands.Cog):
                 cursor = db.cursor()
                 cursor.execute("UPDATE ideas SET answer = ? WHERE id = ?", (raw_answer, idea_id))
                 db.commit()
+                try:
+                    authorid = cursor.execute("SELECT author_id FROM ideas WHERE id = ?", (int(idea_id),)).fetchone()[0]
+                    author = await inter.guild.fetch_member(authorid)
+                    embed = methods.embed("Ты получил ответ на свою идею", f"{answer}\n{reason}\n\n{message.jump_url}")
+                    await author.send(embed=embed)
+                except:
+                    pass
 
-            await inter.send(f'Ты успешно ответил на идею {message.jump_url}', ephemeral=True)
+            await inter.edit_original_response(f'Ты успешно ответил на идею {message.jump_url}')
         except:
             embed = methods.error("Указан неверный айди идеи")
-            await inter.send(embed=embed, ephemeral=True)
+            await inter.edit_original_response(embed=embed)
 
     @commands.Cog.listener("on_button_click")
     async def idea_listener(self, inter: disnake.MessageInteraction):
-        if inter.component.custom_id not in ("like", "dislike"):
+        if inter.component.custom_id not in ["like", "dislike"]:
                 return
 
-        if inter.component.custom_id == "like":
+        if inter.component.custom_id in ["like", "dislike"]:
+            if inter.component.custom_id == "like":
+                rating = 1
+            else:
+                rating = -1
 
-            methods.set_rating(inter.author.id, inter.message.id, 1)
+            methods.set_rating(inter.author.id, inter.message.id, rating)
             likes, dislikes = methods.get_rating(inter.message.id)
 
             embed = inter.message.embeds[0]
-            embed.clear_fields()
-            embed.add_field(name="Лайков:", value=f"```{likes}```", inline=True)
-            embed.add_field(name="Дизлайков:", value=f"```{dislikes}```", inline=True)
+            embed.set_field_at(0, name="👍 Лайки:", value=f"```{likes}```", inline=True)
+            embed.set_field_at(1, name="👎 Дизлайки:", value=f"```{dislikes}```", inline=True)
 
             await inter.message.edit(embed=embed)
-            await inter.response.send_message("Ты проголосовал :thumbsup:", ephemeral=True)
 
-        elif inter.component.custom_id == "dislike":
+            if inter.component.custom_id == "like":
+                message = "Ты проголосовал :thumbsup:"
+            else:
+                message = "Ты проголосовал :thumbsdown:"
 
-            methods.set_rating(inter.author.id, inter.message.id, -1)
-            likes, dislikes = methods.get_rating(inter.message.id)
-
-            embed = inter.message.embeds[0]
-            embed.clear_fields()
-            embed.add_field(name="Лайков:", value=f"```{likes}```", inline=True)
-            embed.add_field(name="Дизлайков:", value=f"```{dislikes}```", inline=True)
-
-            await inter.message.edit(embed=embed)
-            await inter.response.send_message("Ты проголосовал :thumbsdown:", ephemeral=True)
+            await inter.send(message, ephemeral=True)
 
 
 def setup(bot: commands.Bot):
