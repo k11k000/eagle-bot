@@ -12,9 +12,16 @@ class IdeaModal(disnake.ui.Modal):
     def __init__(self):
         components = [
             disnake.ui.TextInput(
-                label="Идея и описание идеи",
-                placeholder="Формулируйте идею кратко, указывайте её цель и пользу.",
-                custom_id="idea",
+                label="Название идеи",
+                placeholder="Введите название вашей идеи",
+                custom_id="name",
+                style=TextInputStyle.short,
+                max_length=100,
+            ),
+            disnake.ui.TextInput(
+                label="Описание идеи",
+                placeholder="Опишите вашу идею в нескольких предложениях, указывайте её цель и пользу.",
+                custom_id="description",
                 style=TextInputStyle.long,
                 max_length=2000,
             ),
@@ -26,10 +33,14 @@ class IdeaModal(disnake.ui.Modal):
         )
 
     async def callback(self, inter: disnake.ModalInteraction):
-        embed = methods.embed(f"💡 Идея от {inter.author.name}", inter.text_values['idea'])
-        embed.set_thumbnail(url=inter.author.avatar.url)
+        embed = methods.embed(f"{inter.text_values['name']}", inter.text_values['description'])
+        embed.set_author(
+            name=inter.author.name,
+            icon_url=inter.author.avatar.url,
+        )
         embed.add_field(name="👍 Лайки:", value="```0```", inline=True)
         embed.add_field(name="👎 Дизлайки:", value="```0```", inline=True)
+        embed.add_field(name="Соотношение 👍/👎", value="░░░░░░░░░░░░░░░░░░░░░░░░░", inline=False)
 
         channel = inter.guild.get_channel(IDEA_CHANNEL_ID)
         message = await channel.send(embed=embed)
@@ -47,8 +58,8 @@ class IdeaModal(disnake.ui.Modal):
         with sqlite3.connect("ideas.db") as db:
             cursor = db.cursor()
             cursor.execute(
-                "INSERT INTO ideas VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (message.id, inter.author.id, inter.text_values['idea'], 0, 0, '{}', '')
+                "INSERT INTO ideas VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (message.id, inter.author.id, inter.text_values['name'], inter.text_values['description'], 0, 0, '{}', '')
             )
             db.commit()
         await inter.response.send_message(f"Идея отправлена! \n{message.jump_url}", ephemeral=True)
@@ -79,12 +90,15 @@ class Idea(commands.Cog):
 
             if raw_answer == "Отклонено":
                 answer = '❌ Отклонено'
+                color = disnake.Colour.from_rgb(252, 200, 200)
             elif raw_answer == 'Принято':
                 answer = '✅ Принято'
+                color = disnake.Colour.from_rgb(200, 252, 200)
 
             embed = message.embeds[0]
             embed.remove_field(2)
             embed.add_field(name=answer, value=reason, inline=False)
+            embed.color = color
             
             await message.edit(embed=embed, components=[])
 
@@ -99,7 +113,7 @@ class Idea(commands.Cog):
                 try:
                     authorid = cursor.execute("SELECT author_id FROM ideas WHERE id = ?", (int(idea_id),)).fetchone()[0]
                     author = await inter.guild.fetch_member(authorid)
-                    embed = methods.embed("Ты получил ответ на свою идею", f"{answer}\n{reason}\n\n{message.jump_url}")
+                    embed = methods.embed("Ты получил ответ на свою идею", f"**{answer}**\n{reason}\n{message.jump_url}")
                     await author.send(embed=embed)
                 except:
                     pass
@@ -126,6 +140,8 @@ class Idea(commands.Cog):
             embed = inter.message.embeds[0]
             embed.set_field_at(0, name="👍 Лайки:", value=f"```{likes}```", inline=True)
             embed.set_field_at(1, name="👎 Дизлайки:", value=f"```{dislikes}```", inline=True)
+            bar = methods.bar_generator(likes, dislikes)
+            embed.set_field_at(2, name="Соотношение 👍/👎", value=bar, inline=False)
 
             await inter.message.edit(embed=embed)
 

@@ -7,7 +7,7 @@ def startprint(name):
 	now = datetime.datetime.now().strftime("%H:%M:%S")
 	print (f"[{now}] {name} started.")
 
-def embed(title: str, description: str, color = disnake.Colour.yellow(), timestamp: bool = True):
+def embed(title: str, description: str, color = disnake.Colour.from_rgb(252, 250, 220), timestamp: bool = True):
 	embed = disnake.Embed(
 		title=title,
 		description=description,
@@ -59,7 +59,15 @@ def get_rating(idea_id: int):
 		row = cursor.execute("SELECT likes, dislikes FROM ideas WHERE id = ?", (idea_id,)).fetchone()
 		return row if row else (0, 0)
 
+def bar_generator(likes, dislikes):
+    total = likes + dislikes
 
+    rate_likes = likes / total
+    bar_length = 25
+    fill_length = int(bar_length * rate_likes)
+    
+    bar = '█' * fill_length + '░' * (bar_length - fill_length)
+    return bar
 
-
+print(bar_generator(0, 1))
 

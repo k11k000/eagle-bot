@@ -5,8 +5,8 @@ from tabulate import tabulate
 def fetch_and_print_ideas(db_path):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    
-    cursor.execute("SELECT * FROM ideas")
+
+    cursor.execute("SELECT name, likes, dislikes, answer, id FROM ideas")
     rows = cursor.fetchall()
     
     if rows:

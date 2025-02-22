@@ -30,7 +30,8 @@ async def on_ready():
         cursor.execute("""CREATE TABLE IF NOT EXISTS ideas (
             id int,
             author_id int,
-            idea_text text,
+            name text,
+            description text,
             likes int,
             dislikes int,
             voted text,
@@ -39,10 +40,13 @@ async def on_ready():
 
         db.commit()
 
-bot.load_extensions('cogs')
-load_dotenv("config.env")
-token = os.getenv("TOKEN")
+try:
+    bot.load_extensions('cogs')
+    load_dotenv("config.env")
+except:
+    print("[!] Не найден файл config.env")
 
+token = os.getenv("TOKEN")
 if token:
     bot.run(token)
 else:
