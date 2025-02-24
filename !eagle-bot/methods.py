@@ -69,5 +69,3 @@ def bar_generator(likes, dislikes):
     bar = '█' * fill_length + '░' * (bar_length - fill_length)
     return bar
 
-print(bar_generator(0, 1))
-
