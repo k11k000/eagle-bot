@@ -41,13 +41,15 @@ async def on_ready():
         db.commit()
 
 try:
-    bot.load_extensions('cogs')
     load_dotenv("config.env")
 except:
     print("[!] Не найден файл config.env")
+    raise
 
 token = os.getenv("TOKEN")
 if token:
+    bot.load_extensions('cogs')
     bot.run(token)
 else:
     print("[!] Не найден TOKEN в config.env")
+    raise
