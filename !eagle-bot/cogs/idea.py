@@ -1,12 +1,26 @@
 import disnake
 from disnake.ext import commands
 from disnake import TextInputStyle
+import time
 import methods
 import sqlite3
 import json
 import traceback
+from dotenv import load_dotenv
+import os
 
-IDEA_CHANNEL_ID = 1335383057703637164 # тут айди канала с идеями
+load_dotenv("config.env")
+IDEA_CHANNEL_ID = os.getenv("IDEA_CHANNEL_ID")
+COOLDOWN = os.getenv("COOLDOWN_IDEA_COMMAND")
+if not COOLDOWN:
+    print("[?] Не найден COOLDOWN_IDEA_COMMAND в config.env, используется задержка по умолчанию (60 секунд)")
+    COOLDOWN = 60
+
+if not IDEA_CHANNEL_ID:
+    print("[!] Не найден IDEA_CHANNEL_ID в config.env")
+    raise 
+
+
 
 class IdeaModal(disnake.ui.Modal):
     def __init__(self):
@@ -42,7 +56,7 @@ class IdeaModal(disnake.ui.Modal):
         embed.add_field(name="👎 Дизлайки:", value="```0```", inline=True)
         embed.add_field(name="Соотношение 👍/👎", value="░░░░░░░░░░░░░░░░░░░░░░░░░", inline=False)
 
-        channel = inter.guild.get_channel(IDEA_CHANNEL_ID)
+        channel = inter.guild.get_channel(int(IDEA_CHANNEL_ID))
         message = await channel.send(embed=embed)
 
         components=[
@@ -69,11 +83,20 @@ class Idea(commands.Cog):
         self.bot = bot
 
     @commands.slash_command(description="Подать идею в канал с идеями.")
+    @commands.cooldown(1, COOLDOWN, commands.BucketType.user)
     async def idea(self, inter: disnake.ApplicationCommandInteraction):
         await inter.response.send_modal(modal=IdeaModal())
 
+    @idea.error
+    async def idea_error(self, inter: disnake.ApplicationCommandInteraction, error):
+        if isinstance(error, commands.CommandOnCooldown):
+            cooldown_timestamp = int(time.time() + error.retry_after)
+            embed = methods.error(f"⏳ Ты сможешь повторно использывать команду <t:{cooldown_timestamp}:R>")
+            await inter.response.send_message(embed=embed, ephemeral=True)
+
+
     @commands.slash_command(description="Ответить на идею.")
-    @commands.default_member_permissions(manage_threads=True, manage_messages=True)
+    @commands.default_member_permissions(manage_threads=True, manage_messages=True) # Тут можно настроить права для ответа на идеи
     async def answer(
         self, 
         inter: disnake.ApplicationCommandInteraction, 
