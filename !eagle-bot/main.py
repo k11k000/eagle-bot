@@ -15,7 +15,7 @@ activity = disnake.Activity(
 bot = commands.Bot(
     intents=disnake.Intents.all(),
     activity=activity,
-    default_install_types=disnake.ApplicationInstallTypes.all()
+    default_contexts=disnake.InteractionContextTypes(guild=True)
 )
 
 os.system('cls' if sys.platform == 'win32' else 'clear')
