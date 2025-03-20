@@ -43,13 +43,11 @@ async def on_ready():
 try:
     load_dotenv("config.env")
 except:
-    print("[!] Не найден файл config.env")
-    raise
+    raise ValueError("Не найден файл config.env")
 
 token = os.getenv("TOKEN")
 if token:
     bot.load_extensions('cogs')
     bot.run(token)
 else:
-    print("[!] Не найден TOKEN в config.env")
-    raise
+    raise ValueError("Не найден TOKEN в config.env")

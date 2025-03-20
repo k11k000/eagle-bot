@@ -11,16 +11,13 @@ import os
 
 load_dotenv("config.env")
 IDEA_CHANNEL_ID = os.getenv("IDEA_CHANNEL_ID")
-COOLDOWN = os.getenv("COOLDOWN_IDEA_COMMAND")
+COOLDOWN = int(os.getenv("COOLDOWN_IDEA_COMMAND", 60))
 if not COOLDOWN:
     print("[?] Не найден COOLDOWN_IDEA_COMMAND в config.env, используется задержка по умолчанию (60 секунд)")
-    COOLDOWN = 60
 
 if not IDEA_CHANNEL_ID:
-    print("[!] Не найден IDEA_CHANNEL_ID в config.env")
-    raise 
-
-
+    raise ValueError("Не найден IDEA_CHANNEL_ID в config.env")
+     
 
 class IdeaModal(disnake.ui.Modal):
     def __init__(self):
@@ -112,7 +109,7 @@ class Idea(commands.Cog):
             message = await channel.fetch_message(idea_id)
 
             if raw_answer == "Отклонено":
-                answer = '❌ Отклонено'
+                answer = '❎ Отклонено'
                 color = disnake.Colour.from_rgb(252, 200, 200)
             elif raw_answer == 'Принято':
                 answer = '✅ Принято'
@@ -149,12 +146,14 @@ class Idea(commands.Cog):
     @commands.Cog.listener("on_button_click")
     async def idea_listener(self, inter: disnake.MessageInteraction):
         if inter.component.custom_id not in ["like", "dislike"]:
-                return
+            return
 
         if inter.component.custom_id in ["like", "dislike"]:
             if inter.component.custom_id == "like":
+                message = "Ты проголосовал :thumbsup:"
                 rating = 1
             else:
+                message = "Ты проголосовал :thumbsdown:"
                 rating = -1
 
             methods.set_rating(inter.author.id, inter.message.id, rating)
@@ -167,12 +166,6 @@ class Idea(commands.Cog):
             embed.set_field_at(2, name="Соотношение 👍/👎", value=bar, inline=False)
 
             await inter.message.edit(embed=embed)
-
-            if inter.component.custom_id == "like":
-                message = "Ты проголосовал :thumbsup:"
-            else:
-                message = "Ты проголосовал :thumbsdown:"
-
             await inter.send(message, ephemeral=True)
 
 
