@@ -44,6 +44,7 @@ class IdeaModal(disnake.ui.Modal):
         )
 
     async def callback(self, inter: disnake.ModalInteraction):
+        await inter.response.defer(ephemeral=True)
         embed = methods.embed(f"{inter.text_values['name']}", inter.text_values['description'])
         embed.set_author(
             name=inter.author.name,
@@ -73,7 +74,8 @@ class IdeaModal(disnake.ui.Modal):
                 (message.id, inter.author.id, inter.text_values['name'], inter.text_values['description'], 0, 0, '{}', '')
             )
             db.commit()
-        await inter.response.send_message(f"Идея отправлена! \n{message.jump_url}", ephemeral=True)
+
+        await inter.edit_original_response(f"Идея отправлена! {message.jump_url} \n")
 
 class Idea(commands.Cog):
     def __init__(self, bot: commands.Bot):
